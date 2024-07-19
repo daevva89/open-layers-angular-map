@@ -1,74 +1,74 @@
-import { Component, OnInit, AfterViewInit, ViewChild } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  AfterViewInit,
+  ViewChild,
+  NgZone,
+} from '@angular/core';
 import Map from 'ol/Map';
 import View from 'ol/View';
 import TileLayer from 'ol/layer/Tile';
 import OSM from 'ol/source/OSM';
 import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
-import { Style, Icon, Stroke, Fill, Circle as CircleStyle } from 'ol/style';
+import { Style, Stroke, Fill } from 'ol/style';
 import VectorSource from 'ol/source/Vector';
 import VectorLayer from 'ol/layer/Vector';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { HttpClient } from '@angular/common/http';
-import { tap, catchError } from 'rxjs/operators';
 import { GeocodingService } from '../geocoding.service';
-import { ObjectiveService, Objective } from '../objective.service';
 import { OverlayComponent } from '../overlay/overlay.component';
 import { getDistance } from 'ol/sphere';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, of, Subject } from 'rxjs';
 import GeoJSON from 'ol/format/GeoJSON';
+import { ObjectiveLayerComponent } from '../objective-layer/objective-layer.component';
+import { ClickedPointLayerComponent } from '../clicked-point-layer/clicked-point-layer.component';
+import { CountryBordersLayerComponent } from '../country-borders-layer/country-borders-layer.component';
+import { debounceTime } from 'rxjs/operators';
 
 @Component({
   selector: 'app-map',
   templateUrl: './map.component.html',
   styleUrls: ['./map.component.scss'],
   standalone: true,
-  imports: [OverlayComponent],
+  imports: [
+    OverlayComponent,
+    ObjectiveLayerComponent,
+    ClickedPointLayerComponent,
+    CountryBordersLayerComponent,
+  ],
 })
 export class MapComponent implements OnInit, AfterViewInit {
   @ViewChild(OverlayComponent) overlayComponent!: OverlayComponent;
+  @ViewChild(ObjectiveLayerComponent)
+  objectiveLayerComponent!: ObjectiveLayerComponent;
+  @ViewChild(ClickedPointLayerComponent)
+  clickedPointLayerComponent!: ClickedPointLayerComponent;
+  @ViewChild(CountryBordersLayerComponent)
+  countryBordersLayerComponent!: CountryBordersLayerComponent;
 
   map!: Map;
-  objectives: Objective[] = [];
-  objectiveLayer!: VectorLayer<any>;
   regionLayer!: VectorLayer<any>;
-  clickedPointLayer!: VectorLayer<any>; // Separate layer for clicked point
-  countryLayer!: VectorLayer<any>; // Layer for country borders
   markedPoint!: Feature<Point> | null;
+
+  private pointerMoveSubject = new Subject<any>();
 
   constructor(
     private http: HttpClient,
     private geocodingService: GeocodingService,
-    private objectiveService: ObjectiveService
+    private ngZone: NgZone
   ) {}
 
-  ngOnInit() {
-    this.loadObjectives();
-    this.loadCountryBorders();
-  }
+  ngOnInit() {}
 
   ngAfterViewInit() {
     this.initializeMap();
-  }
+    this.objectiveLayerComponent.map = this.map; // Set map after view initialization
+    this.clickedPointLayerComponent.map = this.map; // Set map after view initialization
+    this.countryBordersLayerComponent.map = this.map; // Set map after view initialization
 
-  loadObjectives() {
-    this.objectiveService
-      .loadObjectives()
-      .pipe(
-        tap((objectives) => {
-          this.objectives = objectives;
-          this.addMarkers();
-        })
-      )
-      .subscribe();
-  }
-
-  loadCountryBorders() {
-    this.http.get('countries.geojson').subscribe((data: any) => {
-      const features = new GeoJSON().readFeatures(data, {
-        featureProjection: 'EPSG:3857',
-      });
-      this.countryLayer.getSource()?.addFeatures(features);
+    this.pointerMoveSubject.pipe(debounceTime(300)).subscribe((event) => {
+      this.handlePointerMove(event);
     });
   }
 
@@ -86,10 +86,6 @@ export class MapComponent implements OnInit, AfterViewInit {
       }),
     });
 
-    this.objectiveLayer = new VectorLayer({
-      source: new VectorSource(),
-    });
-
     this.regionLayer = new VectorLayer({
       source: new VectorSource(),
       style: new Style({
@@ -103,74 +99,14 @@ export class MapComponent implements OnInit, AfterViewInit {
       }),
     });
 
-    this.clickedPointLayer = new VectorLayer({
-      source: new VectorSource(),
-    });
-
-    this.countryLayer = new VectorLayer({
-      source: new VectorSource(),
-      style: new Style({
-        stroke: new Stroke({
-          color: 'rgba(0, 0, 0, 0)', // Transparent border
-          width: 0,
-        }),
-        fill: new Fill({
-          color: 'rgba(0, 0, 0, 0)', // No fill color
-        }),
-      }),
-    });
-
-    this.map.addLayer(this.objectiveLayer);
     this.map.addLayer(this.regionLayer);
-    this.map.addLayer(this.clickedPointLayer);
-    this.map.addLayer(this.countryLayer);
 
     this.overlayComponent.setMap(this.map);
     this.overlayComponent.setGeocodingService(this.geocodingService);
 
     this.map.on('click', (event) => this.handleMapClick(event));
-
-    this.map.on('pointermove', (event) => this.handlePointerMove(event));
-  }
-
-  addMarkers() {
-    const features = this.objectives.map((obj) => {
-      const [latitude, longitude] = obj.coordinates;
-      const transformedCoordinates = fromLonLat([longitude, latitude]);
-      const feature = new Feature<Point>({
-        geometry: new Point(transformedCoordinates),
-        name: obj.name,
-        originalCoordinates: [latitude, longitude], // Store original coordinates
-      });
-      feature.setStyle(this.createMarkerStyle('map-marker.png'));
-      return feature;
-    });
-
-    this.objectiveLayer.getSource()?.addFeatures(features);
-  }
-
-  createMarkerStyle(iconSrc: string) {
-    return new Style({
-      image: new Icon({
-        anchor: [0.5, 1],
-        src: iconSrc,
-        scale: 0.05,
-      }),
-    });
-  }
-
-  createClickedPointStyle() {
-    return new Style({
-      image: new CircleStyle({
-        radius: 6,
-        fill: new Fill({
-          color: 'rgba(255, 0, 0, 1)',
-        }),
-        stroke: new Stroke({
-          color: 'rgba(255, 0, 0, 0.8)',
-          width: 2,
-        }),
-      }),
+    this.map.on('pointermove', (event) => {
+      this.pointerMoveSubject.next(event);
     });
   }
 
@@ -181,9 +117,31 @@ export class MapComponent implements OnInit, AfterViewInit {
     this.geocodingService.reverseGeocode(latitude, longitude).subscribe(
       (location) => {
         console.log('Clicked location:', location);
-        this.highlightRegionAndObjectives(location, latitude, longitude);
-        this.markClickedLocation(coordinates);
-        this.highlightCountryBorders(coordinates);
+        if (this.objectiveLayerComponent) {
+          this.objectiveLayerComponent.highlightRegionAndObjectives(
+            location,
+            latitude,
+            longitude
+          );
+        } else {
+          console.error('ObjectiveLayerComponent is not available');
+        }
+        if (this.clickedPointLayerComponent) {
+          this.clickedPointLayerComponent.markClickedLocation(coordinates);
+        } else {
+          console.error('ClickedPointLayerComponent is not available');
+        }
+        if (this.countryBordersLayerComponent) {
+          console.log(
+            'Calling highlightCountryBorders with coordinates:',
+            coordinates
+          );
+          this.countryBordersLayerComponent.highlightCountryBorders(
+            coordinates
+          );
+        } else {
+          console.error('CountryBordersLayerComponent is not available');
+        }
       },
       (error) => {
         console.error('Geocoding error:', error);
@@ -191,104 +149,16 @@ export class MapComponent implements OnInit, AfterViewInit {
     );
   }
 
-  highlightRegionAndObjectives(
-    location: string,
-    latitude: number,
-    longitude: number
-  ) {
-    const highlightedFeatures: Feature<Point>[] = [];
-    const features = this.objectiveLayer.getSource()?.getFeatures() || [];
-
-    const reverseGeocodeRequests = features.map((feature) => {
-      const originalCoordinates = feature.get('originalCoordinates');
-      if (originalCoordinates && originalCoordinates.length === 2) {
-        return this.geocodingService
-          .reverseGeocode(originalCoordinates[0], originalCoordinates[1])
-          .pipe(
-            tap((objectiveLocation) => {
-              if (objectiveLocation === location) {
-                const distance = getDistance(
-                  [longitude, latitude],
-                  originalCoordinates
-                );
-                feature.set('distance', distance);
-                highlightedFeatures.push(feature);
-              }
-            }),
-            catchError((error) => {
-              console.error('Geocoding error for objective:', error);
-              return of(null);
-            })
-          );
-      }
-      return of(null);
-    });
-
-    forkJoin(reverseGeocodeRequests).subscribe(() => {
-      this.updateObjectiveStyles(highlightedFeatures);
-    });
-  }
-
-  updateObjectiveStyles(highlightedFeatures: Feature<Point>[]) {
-    const defaultStyle = this.createMarkerStyle('map-marker.png');
-    const highlightedStyle = this.createMarkerStyle('map-marker-red.png');
-
-    const features = this.objectiveLayer.getSource()?.getFeatures() || [];
-    features.forEach((feature) => {
-      if (highlightedFeatures.includes(feature as Feature<Point>)) {
-        feature.setStyle(highlightedStyle);
-        console.log('Highlighted Feature:', feature);
-      } else {
-        feature.setStyle(defaultStyle);
-      }
-    });
-  }
-
-  markClickedLocation(coordinates: [number, number]) {
-    if (this.markedPoint) {
-      this.clickedPointLayer.getSource()?.removeFeature(this.markedPoint);
-    }
-
-    this.markedPoint = new Feature<Point>({
-      geometry: new Point(coordinates),
-    });
-
-    this.markedPoint.setStyle(this.createClickedPointStyle());
-
-    this.clickedPointLayer.getSource()?.addFeature(this.markedPoint);
-  }
-
-  highlightCountryBorders(coordinates: [number, number]) {
-    const features = this.countryLayer.getSource()?.getFeatures() || [];
-
-    features.forEach((feature) => {
-      const geometry = feature.getGeometry();
-      if (geometry && geometry.intersectsCoordinate(coordinates)) {
-        feature.setStyle(
-          new Style({
-            stroke: new Stroke({
-              color: 'rgba(255, 0, 0, 0.8)',
-              width: 2,
-            }),
-            fill: new Fill({
-              color: 'rgba(255, 0, 0, 0.2)',
-            }),
-          })
-        );
-      } else {
-        feature.setStyle(null); // Remove style for non-highlighted features
-      }
-    });
-  }
-
   handlePointerMove(event: any) {
     const features = this.map.getFeaturesAtPixel(event.pixel);
     const hoveredFeature = features && features.length > 0 ? features[0] : null;
 
-    if (hoveredFeature && hoveredFeature !== this.markedPoint) {
-      this.overlayComponent.showOverlay(hoveredFeature);
-    } else {
-      this.overlayComponent.hideOverlay();
-    }
+    this.ngZone.run(() => {
+      if (hoveredFeature && hoveredFeature !== this.markedPoint) {
+        this.overlayComponent.showOverlay(hoveredFeature);
+      } else {
+        this.overlayComponent.hideOverlay();
+      }
+    });
   }
 }

@@ -48,16 +48,24 @@ export class OverlayComponent implements OnInit {
       this.overlay.setPosition(coordinates);
       const [longitude, latitude] = toLonLat(coordinates);
       const name = feature.get('name');
-      this.geocodingService.reverseGeocode(latitude, longitude).subscribe(
-        (location) => {
-          this.content.innerHTML = `<b>${name}</b><br>${location}`;
-          this.container.style.display = 'block';
-        },
-        (error) => {
-          this.content.innerHTML = `<b>${name}</b><br>Unknown location`;
-          this.container.style.display = 'block';
-        }
-      );
+      const type = feature.get('type');
+
+      if (type === 'objective') {
+        this.geocodingService.reverseGeocode(latitude, longitude).subscribe(
+          (location) => {
+            this.content.innerHTML = `<b>${name}</b><br>${location}`;
+            this.container.style.display = 'block';
+          },
+          (error) => {
+            this.content.innerHTML = `<b>${name}</b><br>Unknown location`;
+            this.container.style.display = 'block';
+          }
+        );
+      } else {
+        this.hideOverlay();
+      }
+    } else {
+      this.hideOverlay();
     }
   }
 
