@@ -107,11 +107,6 @@ export class ObjectiveLayerComponent implements OnInit, AfterViewInit {
                   [longitude, latitude],
                   [originalCoordinates[0], originalCoordinates[1]]
                 );
-                console.log(
-                  `Distance from clicked point to objective "${feature.get(
-                    'name'
-                  )}": ${distance} meters`
-                );
                 feature.set('distance', distance / 1000); // Convert distance to kilometers
                 highlightedFeatures.push(feature);
               }
@@ -139,10 +134,6 @@ export class ObjectiveLayerComponent implements OnInit, AfterViewInit {
     features.forEach((feature) => {
       if (highlightedFeatures.includes(feature as Feature<Point>)) {
         feature.setStyle(highlightedStyle);
-        console.log('Highlighted Feature:', feature);
-        console.log(
-          `Distance to clicked point: ${feature.get('clickedPointDistance')} km`
-        );
       } else {
         feature.setStyle(defaultStyle);
       }
@@ -166,11 +157,6 @@ export class ObjectiveLayerComponent implements OnInit, AfterViewInit {
                   originalCoordinates[0],
                   originalCoordinates[1],
                 ]);
-                console.log(
-                  `Distance from clicked point to objective "${feature.get(
-                    'name'
-                  )}": ${distance} meters`
-                );
                 feature.set('clickedPointDistance', distance / 1000); // Convert distance to kilometers
               } else {
                 feature.set('clickedPointDistance', null); // Clear distance if not in same country

@@ -51,19 +51,12 @@ export class CountryBordersLayerComponent implements OnInit, AfterViewInit {
 
   loadCountryBorders() {
     const geojsonUrl = '/countries.geojson'; // URL for public folder
-    console.log('Loading GeoJSON from:', geojsonUrl);
     this.http.get(geojsonUrl).subscribe(
       (data: any) => {
-        console.log('GeoJSON data:', data); // Debugging line
         const features = new GeoJSON().readFeatures(data, {
           featureProjection: 'EPSG:3857',
         });
-        console.log('Loaded features:', features); // Debugging line
         this.countryLayer.getSource()?.addFeatures(features);
-        console.log(
-          'Features in source after adding:',
-          this.countryLayer.getSource()?.getFeatures().length
-        ); // Debugging line
 
         // Log coordinates of all features
         this.countryLayer
@@ -72,7 +65,6 @@ export class CountryBordersLayerComponent implements OnInit, AfterViewInit {
           .forEach((feature: Feature<Geometry>) => {
             const geom = feature.getGeometry();
             if (geom) {
-              console.log('Feature geometry:', geom);
             }
           });
       },
@@ -84,8 +76,6 @@ export class CountryBordersLayerComponent implements OnInit, AfterViewInit {
 
   highlightCountryBorders(coordinates: Coordinate) {
     const features = this.countryLayer.getSource()?.getFeatures() || [];
-    console.log('Highlighting country borders at coordinates:', coordinates);
-    console.log('Number of features:', features.length);
 
     let foundFeature = false;
 
@@ -93,7 +83,6 @@ export class CountryBordersLayerComponent implements OnInit, AfterViewInit {
       const geometry = feature.getGeometry();
       if (geometry && geometry.intersectsCoordinate(coordinates)) {
         foundFeature = true;
-        console.log('Highlighting feature:', feature);
         feature.setStyle(
           new Style({
             stroke: new Stroke({

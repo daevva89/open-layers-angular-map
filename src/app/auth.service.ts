@@ -22,8 +22,6 @@ export class AuthService {
           const user = credentials.find(
             (cred) => cred.username === username && cred.password === password
           );
-          console.log('Attempted login with:', { username, password });
-          console.log('Matched user:', user);
           if (user) {
             localStorage.setItem('user', JSON.stringify(user));
           }

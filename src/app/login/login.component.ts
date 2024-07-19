@@ -21,7 +21,6 @@ export class LoginComponent {
     this.authService
       .login(this.username, this.password)
       .subscribe((isAuthenticated) => {
-        console.log('Login result:', isAuthenticated);
         if (isAuthenticated) {
           this.router.navigate(['/map']);
         } else {

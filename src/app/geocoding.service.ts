@@ -11,10 +11,8 @@ export class GeocodingService {
 
   reverseGeocode(latitude: number, longitude: number): Observable<string> {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
-    console.log('Geocoding request URL:', url);
     return this.http.get<any>(url).pipe(
       map((response) => {
-        console.log('Geocoding response:', response);
         const country = response.address?.country || 'Unknown country';
         return country;
       }),

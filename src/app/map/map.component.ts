@@ -18,13 +18,11 @@ import { fromLonLat, toLonLat } from 'ol/proj';
 import { HttpClient } from '@angular/common/http';
 import { GeocodingService } from '../geocoding.service';
 import { OverlayComponent } from '../overlay/overlay.component';
-import { getDistance } from 'ol/sphere';
-import { forkJoin, of, Subject } from 'rxjs';
-import GeoJSON from 'ol/format/GeoJSON';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { ObjectiveLayerComponent } from '../objective-layer/objective-layer.component';
 import { ClickedPointLayerComponent } from '../clicked-point-layer/clicked-point-layer.component';
 import { CountryBordersLayerComponent } from '../country-borders-layer/country-borders-layer.component';
-import { debounceTime } from 'rxjs/operators';
 
 @Component({
   selector: 'app-map',
@@ -69,6 +67,12 @@ export class MapComponent implements OnInit, AfterViewInit {
 
     this.pointerMoveSubject.pipe(debounceTime(300)).subscribe((event) => {
       this.handlePointerMove(event);
+    });
+
+    // Add right-click event listener
+    this.map.getViewport().addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      this.revertActions();
     });
   }
 
@@ -116,7 +120,6 @@ export class MapComponent implements OnInit, AfterViewInit {
 
     this.geocodingService.reverseGeocode(latitude, longitude).subscribe(
       (location) => {
-        console.log('Clicked location:', location);
         if (this.objectiveLayerComponent) {
           this.objectiveLayerComponent.highlightRegionAndObjectives(
             location,
@@ -133,10 +136,6 @@ export class MapComponent implements OnInit, AfterViewInit {
           console.error('ClickedPointLayerComponent is not available');
         }
         if (this.countryBordersLayerComponent) {
-          console.log(
-            'Calling highlightCountryBorders with coordinates:',
-            coordinates
-          );
           this.countryBordersLayerComponent.highlightCountryBorders(
             coordinates
           );
@@ -161,5 +160,58 @@ export class MapComponent implements OnInit, AfterViewInit {
         this.overlayComponent.hideOverlay();
       }
     });
+  }
+
+  revertActions() {
+    // Clear distance metadata from overlay
+    this.overlayComponent.hideOverlay();
+
+    // Remove highlighted objectives and return to normal marker
+    if (this.objectiveLayerComponent) {
+      const defaultStyle =
+        this.objectiveLayerComponent.createMarkerStyle('map-marker.png');
+      const features = this.objectiveLayerComponent.objectiveLayer
+        .getSource()
+        ?.getFeatures();
+      if (features) {
+        features.forEach((feature) => {
+          feature.setStyle(defaultStyle);
+          feature.set('distance', null); // Clear distance metadata
+          feature.set('clickedPointDistance', null); // Clear clickedPointDistance metadata
+        });
+      }
+    }
+
+    // Remove the marked point
+    if (this.clickedPointLayerComponent) {
+      if (this.clickedPointLayerComponent.markedPoint) {
+        this.clickedPointLayerComponent.clickedPointLayer
+          .getSource()
+          ?.removeFeature(this.clickedPointLayerComponent.markedPoint);
+        this.clickedPointLayerComponent.markedPoint = null;
+      }
+    }
+
+    // Clear country borders highlight
+    if (this.countryBordersLayerComponent) {
+      const features = this.countryBordersLayerComponent.countryLayer
+        .getSource()
+        ?.getFeatures();
+      if (features) {
+        features.forEach((feature) => {
+          feature.setStyle(
+            new Style({
+              stroke: new Stroke({
+                color: 'rgba(0, 0, 0, 0)', // Transparent border
+                width: 0,
+              }),
+              fill: new Fill({
+                color: 'rgba(0, 0, 0, 0)', // No fill color
+              }),
+            })
+          );
+        });
+      }
+    }
   }
 }
