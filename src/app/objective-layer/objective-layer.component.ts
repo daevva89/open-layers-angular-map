@@ -5,7 +5,7 @@ import Point from 'ol/geom/Point';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import { Style, Icon } from 'ol/style';
-import { fromLonLat } from 'ol/proj';
+import { fromLonLat, toLonLat } from 'ol/proj';
 import { ObjectiveService, Objective } from '../objective.service';
 import { GeocodingService } from '../geocoding.service';
 import { getDistance } from 'ol/sphere';
@@ -66,7 +66,7 @@ export class ObjectiveLayerComponent implements OnInit, AfterViewInit {
       const feature = new Feature<Point>({
         geometry: new Point(transformedCoordinates),
         name: obj.name,
-        originalCoordinates: [latitude, longitude], // Store original coordinates
+        originalCoordinates: [longitude, latitude], // Store original coordinates in EPSG:4326
       });
       feature.set('type', 'objective'); // Add unique property
       feature.setStyle(this.createMarkerStyle('map-marker.png'));
@@ -89,7 +89,8 @@ export class ObjectiveLayerComponent implements OnInit, AfterViewInit {
   highlightRegionAndObjectives(
     location: string,
     latitude: number,
-    longitude: number
+    longitude: number,
+    clickedCoordinates: [number, number]
   ) {
     const highlightedFeatures: Feature<Point>[] = [];
     const features = this.objectiveLayer.getSource()?.getFeatures() || [];
@@ -98,15 +99,20 @@ export class ObjectiveLayerComponent implements OnInit, AfterViewInit {
       const originalCoordinates = feature.get('originalCoordinates');
       if (originalCoordinates && originalCoordinates.length === 2) {
         return this.geocodingService
-          .reverseGeocode(originalCoordinates[0], originalCoordinates[1])
+          .reverseGeocode(originalCoordinates[1], originalCoordinates[0]) // Reverse lat/lon for geocoding
           .pipe(
             tap((objectiveLocation) => {
               if (objectiveLocation === location) {
                 const distance = getDistance(
                   [longitude, latitude],
-                  originalCoordinates
+                  [originalCoordinates[0], originalCoordinates[1]]
                 );
-                feature.set('distance', distance);
+                console.log(
+                  `Distance from clicked point to objective "${feature.get(
+                    'name'
+                  )}": ${distance} meters`
+                );
+                feature.set('distance', distance / 1000); // Convert distance to kilometers
                 highlightedFeatures.push(feature);
               }
             }),
@@ -121,6 +127,7 @@ export class ObjectiveLayerComponent implements OnInit, AfterViewInit {
 
     forkJoin(reverseGeocodeRequests).subscribe(() => {
       this.updateObjectiveStyles(highlightedFeatures);
+      this.updateObjectiveDistances(clickedCoordinates, location);
     });
   }
 
@@ -133,8 +140,47 @@ export class ObjectiveLayerComponent implements OnInit, AfterViewInit {
       if (highlightedFeatures.includes(feature as Feature<Point>)) {
         feature.setStyle(highlightedStyle);
         console.log('Highlighted Feature:', feature);
+        console.log(
+          `Distance to clicked point: ${feature.get('clickedPointDistance')} km`
+        );
       } else {
         feature.setStyle(defaultStyle);
+      }
+    });
+  }
+
+  updateObjectiveDistances(
+    clickedCoordinates: [number, number],
+    clickedLocation: string
+  ) {
+    const features = this.objectiveLayer.getSource()?.getFeatures() || [];
+    features.forEach((feature) => {
+      const originalCoordinates = feature.get('originalCoordinates');
+      if (originalCoordinates && originalCoordinates.length === 2) {
+        this.geocodingService
+          .reverseGeocode(originalCoordinates[1], originalCoordinates[0]) // Reverse lat/lon for geocoding
+          .subscribe(
+            (objectiveLocation) => {
+              if (objectiveLocation === clickedLocation) {
+                const distance = getDistance(toLonLat(clickedCoordinates), [
+                  originalCoordinates[0],
+                  originalCoordinates[1],
+                ]);
+                console.log(
+                  `Distance from clicked point to objective "${feature.get(
+                    'name'
+                  )}": ${distance} meters`
+                );
+                feature.set('clickedPointDistance', distance / 1000); // Convert distance to kilometers
+              } else {
+                feature.set('clickedPointDistance', null); // Clear distance if not in same country
+              }
+            },
+            (error) => {
+              console.error('Geocoding error:', error);
+              feature.set('clickedPointDistance', null); // Clear distance on error
+            }
+          );
       }
     });
   }

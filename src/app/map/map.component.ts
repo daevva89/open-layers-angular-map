@@ -121,7 +121,8 @@ export class MapComponent implements OnInit, AfterViewInit {
           this.objectiveLayerComponent.highlightRegionAndObjectives(
             location,
             latitude,
-            longitude
+            longitude,
+            coordinates // Pass clicked coordinates to ObjectiveLayerComponent
           );
         } else {
           console.error('ObjectiveLayerComponent is not available');

@@ -49,15 +49,24 @@ export class OverlayComponent implements OnInit {
       const [longitude, latitude] = toLonLat(coordinates);
       const name = feature.get('name');
       const type = feature.get('type');
+      const distance = feature.get('clickedPointDistance');
 
       if (type === 'objective') {
         this.geocodingService.reverseGeocode(latitude, longitude).subscribe(
           (location) => {
-            this.content.innerHTML = `<b>${name}</b><br>${location}`;
+            let contentHtml = `<b>${name}</b><br>${location}`;
+            if (distance !== null && distance !== undefined) {
+              contentHtml += `<br>Distance: ${distance.toFixed(2)} km`;
+            }
+            this.content.innerHTML = contentHtml;
             this.container.style.display = 'block';
           },
           (error) => {
-            this.content.innerHTML = `<b>${name}</b><br>Unknown location`;
+            let contentHtml = `<b>${name}</b><br>Unknown location`;
+            if (distance !== null && distance !== undefined) {
+              contentHtml += `<br>Distance: ${distance.toFixed(2)} km`;
+            }
+            this.content.innerHTML = contentHtml;
             this.container.style.display = 'block';
           }
         );
