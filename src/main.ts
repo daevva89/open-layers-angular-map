@@ -8,6 +8,8 @@ import { routes } from './app/app.routes';
 import { AuthGuard } from './app/auth.guard';
 import { AuthService } from './app/auth.service';
 import { FormsModule } from '@angular/forms';
+import { GeocodingService } from './app/geocoding.service';
+import { ObjectiveService } from './app/objective.service';
 
 bootstrapApplication(AppComponent, {
   providers: [
@@ -19,5 +21,7 @@ bootstrapApplication(AppComponent, {
     ),
     AuthGuard,
     AuthService,
+    GeocodingService,
+    ObjectiveService,
   ],
 });
