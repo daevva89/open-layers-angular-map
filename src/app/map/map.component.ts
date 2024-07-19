@@ -16,6 +16,7 @@ import { ObjectiveService, Objective } from '../objective.service';
 import { OverlayComponent } from '../overlay/overlay.component';
 import { getDistance } from 'ol/sphere';
 import { forkJoin, of } from 'rxjs';
+import GeoJSON from 'ol/format/GeoJSON';
 
 @Component({
   selector: 'app-map',
@@ -32,6 +33,7 @@ export class MapComponent implements OnInit, AfterViewInit {
   objectiveLayer!: VectorLayer<any>;
   regionLayer!: VectorLayer<any>;
   clickedPointLayer!: VectorLayer<any>; // Separate layer for clicked point
+  countryLayer!: VectorLayer<any>; // Layer for country borders
   markedPoint!: Feature<Point> | null;
 
   constructor(
@@ -42,6 +44,7 @@ export class MapComponent implements OnInit, AfterViewInit {
 
   ngOnInit() {
     this.loadObjectives();
+    this.loadCountryBorders();
   }
 
   ngAfterViewInit() {
@@ -58,6 +61,15 @@ export class MapComponent implements OnInit, AfterViewInit {
         })
       )
       .subscribe();
+  }
+
+  loadCountryBorders() {
+    this.http.get('countries.geojson').subscribe((data: any) => {
+      const features = new GeoJSON().readFeatures(data, {
+        featureProjection: 'EPSG:3857',
+      });
+      this.countryLayer.getSource()?.addFeatures(features);
+    });
   }
 
   initializeMap() {
@@ -95,14 +107,30 @@ export class MapComponent implements OnInit, AfterViewInit {
       source: new VectorSource(),
     });
 
+    this.countryLayer = new VectorLayer({
+      source: new VectorSource(),
+      style: new Style({
+        stroke: new Stroke({
+          color: 'rgba(0, 0, 0, 0)', // Transparent border
+          width: 0,
+        }),
+        fill: new Fill({
+          color: 'rgba(0, 0, 0, 0)', // No fill color
+        }),
+      }),
+    });
+
     this.map.addLayer(this.objectiveLayer);
     this.map.addLayer(this.regionLayer);
     this.map.addLayer(this.clickedPointLayer);
+    this.map.addLayer(this.countryLayer);
 
     this.overlayComponent.setMap(this.map);
     this.overlayComponent.setGeocodingService(this.geocodingService);
 
     this.map.on('click', (event) => this.handleMapClick(event));
+
+    this.map.on('pointermove', (event) => this.handlePointerMove(event));
   }
 
   addMarkers() {
@@ -155,6 +183,7 @@ export class MapComponent implements OnInit, AfterViewInit {
         console.log('Clicked location:', location);
         this.highlightRegionAndObjectives(location, latitude, longitude);
         this.markClickedLocation(coordinates);
+        this.highlightCountryBorders(coordinates);
       },
       (error) => {
         console.error('Geocoding error:', error);
@@ -227,5 +256,39 @@ export class MapComponent implements OnInit, AfterViewInit {
     this.markedPoint.setStyle(this.createClickedPointStyle());
 
     this.clickedPointLayer.getSource()?.addFeature(this.markedPoint);
+  }
+
+  highlightCountryBorders(coordinates: [number, number]) {
+    const features = this.countryLayer.getSource()?.getFeatures() || [];
+
+    features.forEach((feature) => {
+      const geometry = feature.getGeometry();
+      if (geometry && geometry.intersectsCoordinate(coordinates)) {
+        feature.setStyle(
+          new Style({
+            stroke: new Stroke({
+              color: 'rgba(255, 0, 0, 0.8)',
+              width: 2,
+            }),
+            fill: new Fill({
+              color: 'rgba(255, 0, 0, 0.2)',
+            }),
+          })
+        );
+      } else {
+        feature.setStyle(null); // Remove style for non-highlighted features
+      }
+    });
+  }
+
+  handlePointerMove(event: any) {
+    const features = this.map.getFeaturesAtPixel(event.pixel);
+    const hoveredFeature = features && features.length > 0 ? features[0] : null;
+
+    if (hoveredFeature && hoveredFeature !== this.markedPoint) {
+      this.overlayComponent.showOverlay(hoveredFeature);
+    } else {
+      this.overlayComponent.hideOverlay();
+    }
   }
 }

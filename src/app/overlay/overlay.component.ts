@@ -26,7 +26,7 @@ export class OverlayComponent implements OnInit {
     this.content = document.getElementById('popup-content')!;
     this.overlay = new Overlay({
       element: this.container,
-      autoPan: false, // Set to false to prevent map shift
+      autoPan: false,
     });
 
     if (this.map) {
@@ -39,6 +39,30 @@ export class OverlayComponent implements OnInit {
     this.map = map;
     this.map.addOverlay(this.overlay);
     this.initializeOverlay();
+  }
+
+  showOverlay(feature: any) {
+    const geometry = feature.getGeometry();
+    if (geometry instanceof Point) {
+      const coordinates = geometry.getCoordinates();
+      this.overlay.setPosition(coordinates);
+      const [longitude, latitude] = toLonLat(coordinates);
+      const name = feature.get('name');
+      this.geocodingService.reverseGeocode(latitude, longitude).subscribe(
+        (location) => {
+          this.content.innerHTML = `<b>${name}</b><br>${location}`;
+          this.container.style.display = 'block';
+        },
+        (error) => {
+          this.content.innerHTML = `<b>${name}</b><br>Unknown location`;
+          this.container.style.display = 'block';
+        }
+      );
+    }
+  }
+
+  hideOverlay() {
+    this.container.style.display = 'none';
   }
 
   setGeocodingService(geocodingService: GeocodingService): void {
@@ -60,25 +84,9 @@ export class OverlayComponent implements OnInit {
         this.lastFeature = feature || null;
 
         if (feature) {
-          const geometry = feature.getGeometry();
-          if (geometry instanceof Point) {
-            const coordinates = geometry.getCoordinates();
-            this.overlay.setPosition(coordinates);
-            const [longitude, latitude] = toLonLat(coordinates); // Convert back to latitude and longitude
-            const name = feature.get('name');
-            this.geocodingService.reverseGeocode(latitude, longitude).subscribe(
-              (location) => {
-                this.content.innerHTML = `<b>${name}</b><br>${location}`;
-                this.container.style.display = 'block';
-              },
-              (error) => {
-                this.content.innerHTML = `<b>${name}</b><br>Unknown location`;
-                this.container.style.display = 'block';
-              }
-            );
-          }
+          this.showOverlay(feature);
         } else {
-          this.container.style.display = 'none';
+          this.hideOverlay();
         }
       }
     });
