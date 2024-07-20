@@ -150,12 +150,31 @@ export class MapComponent implements OnInit, AfterViewInit {
   }
 
   handlePointerMove(event: any) {
-    const features = this.map.getFeaturesAtPixel(event.pixel);
-    const hoveredFeature = features && features.length > 0 ? features[0] : null;
+    const hitTolerance = 50; // Adjust the tolerance as needed
+    const features = this.map.getFeaturesAtPixel(event.pixel, {
+      hitTolerance,
+    });
+
+    // Filter the features to ensure we only get the Point features
+    const pointFeatures = features.filter((feature) => {
+      const geometry = feature.getGeometry();
+      return geometry && geometry.getType() === 'Point';
+    });
+
+    const hoveredFeature = pointFeatures.length > 0 ? pointFeatures[0] : null;
 
     this.ngZone.run(() => {
       if (hoveredFeature && hoveredFeature !== this.markedPoint) {
-        this.overlayComponent.showOverlay(hoveredFeature);
+        const geometry = hoveredFeature.getGeometry();
+        const geometryType = geometry
+          ? (geometry as any).getType()
+          : 'undefined';
+
+        if (geometry instanceof Point) {
+          this.overlayComponent.showOverlay(hoveredFeature as Feature<Point>);
+        } else {
+          this.overlayComponent.hideOverlay();
+        }
       } else {
         this.overlayComponent.hideOverlay();
       }
