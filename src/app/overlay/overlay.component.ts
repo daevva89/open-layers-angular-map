@@ -109,7 +109,6 @@ export class OverlayComponent implements OnInit {
     });
   }
 
-  // Helper methods to access private properties in tests
   getContainer(): HTMLElement {
     return this.container;
   }

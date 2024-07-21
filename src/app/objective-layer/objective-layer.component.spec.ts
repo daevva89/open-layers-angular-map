@@ -40,7 +40,6 @@ describe('ObjectiveLayerComponent', () => {
       GeocodingService
     ) as jasmine.SpyObj<GeocodingService>;
 
-    // Create a simple OpenLayers map for testing
     map = new Map({
       target: document.createElement('div'),
       view: new View({
@@ -50,14 +49,13 @@ describe('ObjectiveLayerComponent', () => {
     });
     component.map = map;
 
-    // Mock the loadObjectives call before ngAfterViewInit runs
     const objectives: Objective[] = [
       { name: 'Objective 1', coordinates: [1, 2] },
       { name: 'Objective 2', coordinates: [3, 4] },
     ];
     objectiveService.loadObjectives.and.returnValue(of(objectives));
 
-    fixture.detectChanges(); // ngAfterViewInit should be called here
+    fixture.detectChanges();
   });
 
   it('should create', () => {
@@ -77,19 +75,15 @@ describe('ObjectiveLayerComponent', () => {
     setTimeout(() => {
       const features =
         component.objectiveLayer.getSource()?.getFeatures() || [];
-      console.log(
-        'Number of reverseGeocode calls:',
-        geocodingService.reverseGeocode.calls.count()
-      );
       expect(geocodingService.reverseGeocode.calls.count()).toBe(
         features.length * 2
-      ); // Adjusted expected count
+      );
       const highlightedFeatures = features.filter((feature) =>
         feature.get('distance')
       );
       expect(highlightedFeatures.length).toBe(features.length);
       done();
-    }, 500); // Adjust timeout as necessary
+    }, 500);
   });
 
   it('should handle geocoding errors gracefully', (done) => {
@@ -102,10 +96,6 @@ describe('ObjectiveLayerComponent', () => {
     setTimeout(() => {
       const features =
         component.objectiveLayer.getSource()?.getFeatures() || [];
-      console.log(
-        'Number of reverseGeocode calls:',
-        geocodingService.reverseGeocode.calls.count()
-      );
       expect(geocodingService.reverseGeocode.calls.count()).toBe(
         features.length
       );
@@ -114,7 +104,7 @@ describe('ObjectiveLayerComponent', () => {
       );
       expect(highlightedFeatures.length).toBe(0);
       done();
-    }, 500); // Adjust timeout as necessary
+    }, 500);
   });
 
   it('should handle geocoding errors in updateObjectiveDistances gracefully', (done) => {
@@ -138,6 +128,6 @@ describe('ObjectiveLayerComponent', () => {
         expect(feature.get('clickedPointDistance')).toBeNull();
       });
       done();
-    }, 500); // Adjust timeout as necessary
+    }, 500);
   });
 });

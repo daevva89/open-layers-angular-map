@@ -22,7 +22,7 @@ export class CountryBordersLayerComponent implements OnInit, AfterViewInit {
     this._map = map;
     if (this.countryLayer) {
       this._map.addLayer(this.countryLayer);
-      this.loadCountryBorders(); // Ensure this is called after the map is set
+      this.loadCountryBorders();
     }
   }
 
@@ -33,11 +33,11 @@ export class CountryBordersLayerComponent implements OnInit, AfterViewInit {
       source: new VectorSource(),
       style: new Style({
         stroke: new Stroke({
-          color: 'rgba(0, 0, 0, 0)', // Transparent border
+          color: 'rgba(0, 0, 0, 0)',
           width: 0,
         }),
         fill: new Fill({
-          color: 'rgba(0, 0, 0, 0)', // No fill color
+          color: 'rgba(0, 0, 0, 0)',
         }),
       }),
     });
@@ -50,7 +50,7 @@ export class CountryBordersLayerComponent implements OnInit, AfterViewInit {
   }
 
   loadCountryBorders() {
-    const geojsonUrl = '/countries.geojson'; // URL for public folder
+    const geojsonUrl = '/countries.geojson';
     this.http.get(geojsonUrl).subscribe(
       (data: any) => {
         const features = new GeoJSON().readFeatures(data, {
@@ -58,7 +58,6 @@ export class CountryBordersLayerComponent implements OnInit, AfterViewInit {
         });
         this.countryLayer.getSource()?.addFeatures(features);
 
-        // Log coordinates of all features
         this.countryLayer
           .getSource()
           ?.getFeatures()
@@ -95,7 +94,7 @@ export class CountryBordersLayerComponent implements OnInit, AfterViewInit {
           })
         );
       } else {
-        feature.setStyle(null); // Remove style for non-highlighted features
+        feature.setStyle(null);
       }
     });
 

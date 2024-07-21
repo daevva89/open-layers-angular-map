@@ -28,7 +28,6 @@ describe('OverlayComponent', () => {
       GeocodingService
     ) as jasmine.SpyObj<GeocodingService>;
 
-    // Create and attach the container and content elements
     const container = document.createElement('div');
     container.id = 'popup';
     const content = document.createElement('div');
@@ -36,11 +35,9 @@ describe('OverlayComponent', () => {
     container.appendChild(content);
     document.body.appendChild(container);
 
-    // Assign the container and content to the component
     component['container'] = container;
     component['content'] = content;
 
-    // Create a simple OpenLayers map for testing
     map = new Map({
       target: document.createElement('div'),
       view: new View({
@@ -51,14 +48,12 @@ describe('OverlayComponent', () => {
     component.map = map;
     component.geocodingService = geocodingService;
 
-    // Trigger ngOnInit lifecycle hook
     component.ngOnInit();
 
     fixture.detectChanges();
   });
 
   afterEach(() => {
-    // Clean up DOM elements if they still exist
     const container = document.getElementById('popup');
     if (container) {
       container.parentNode?.removeChild(container);

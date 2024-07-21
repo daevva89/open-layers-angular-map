@@ -9,7 +9,7 @@ describe('CountryBordersLayerComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
-        HttpClientTestingModule, // Add this line to provide HttpClient
+        HttpClientTestingModule,
         CountryBordersLayerComponent,
       ],
     }).compileComponents();

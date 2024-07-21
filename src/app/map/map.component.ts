@@ -61,15 +61,14 @@ export class MapComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     this.initializeMap();
-    this.objectiveLayerComponent.map = this.map; // Set map after view initialization
-    this.clickedPointLayerComponent.map = this.map; // Set map after view initialization
-    this.countryBordersLayerComponent.map = this.map; // Set map after view initialization
+    this.objectiveLayerComponent.map = this.map;
+    this.clickedPointLayerComponent.map = this.map;
+    this.countryBordersLayerComponent.map = this.map;
 
     this.pointerMoveSubject.pipe(debounceTime(300)).subscribe((event) => {
       this.handlePointerMove(event);
     });
 
-    // Add right-click event listener
     this.map.getViewport().addEventListener('contextmenu', (event) => {
       event.preventDefault();
       this.revertActions();
@@ -125,7 +124,7 @@ export class MapComponent implements OnInit, AfterViewInit {
             location,
             latitude,
             longitude,
-            coordinates // Pass clicked coordinates to ObjectiveLayerComponent
+            coordinates
           );
         } else {
           console.error('ObjectiveLayerComponent is not available');
@@ -150,12 +149,11 @@ export class MapComponent implements OnInit, AfterViewInit {
   }
 
   handlePointerMove(event: any) {
-    const hitTolerance = 50; // Adjust the tolerance as needed
+    const hitTolerance = 50;
     const features = this.map.getFeaturesAtPixel(event.pixel, {
       hitTolerance,
     });
 
-    // Filter the features to ensure we only get the Point features
     const pointFeatures = features.filter((feature) => {
       const geometry = feature.getGeometry();
       return geometry && geometry.getType() === 'Point';
@@ -182,10 +180,8 @@ export class MapComponent implements OnInit, AfterViewInit {
   }
 
   revertActions() {
-    // Clear distance metadata from overlay
     this.overlayComponent.hideOverlay();
 
-    // Remove highlighted objectives and return to normal marker
     if (this.objectiveLayerComponent) {
       const defaultStyle =
         this.objectiveLayerComponent.createMarkerStyle('map-marker.png');
@@ -195,13 +191,12 @@ export class MapComponent implements OnInit, AfterViewInit {
       if (features) {
         features.forEach((feature) => {
           feature.setStyle(defaultStyle);
-          feature.set('distance', null); // Clear distance metadata
-          feature.set('clickedPointDistance', null); // Clear clickedPointDistance metadata
+          feature.set('distance', null);
+          feature.set('clickedPointDistance', null);
         });
       }
     }
 
-    // Remove the marked point
     if (this.clickedPointLayerComponent) {
       if (this.clickedPointLayerComponent.markedPoint) {
         this.clickedPointLayerComponent.clickedPointLayer
@@ -211,7 +206,6 @@ export class MapComponent implements OnInit, AfterViewInit {
       }
     }
 
-    // Clear country borders highlight
     if (this.countryBordersLayerComponent) {
       const features = this.countryBordersLayerComponent.countryLayer
         .getSource()
@@ -221,11 +215,11 @@ export class MapComponent implements OnInit, AfterViewInit {
           feature.setStyle(
             new Style({
               stroke: new Stroke({
-                color: 'rgba(0, 0, 0, 0)', // Transparent border
+                color: 'rgba(0, 0, 0, 0)',
                 width: 0,
               }),
               fill: new Fill({
-                color: 'rgba(0, 0, 0, 0)', // No fill color
+                color: 'rgba(0, 0, 0, 0)',
               }),
             })
           );

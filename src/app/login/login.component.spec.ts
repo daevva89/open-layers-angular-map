@@ -14,7 +14,7 @@ describe('LoginComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [LoginComponent, FormsModule, HttpClientTestingModule], // Import LoginComponent directly
+      imports: [LoginComponent, FormsModule, HttpClientTestingModule],
       providers: [
         {
           provide: AuthService,
