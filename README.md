@@ -1,27 +1,57 @@
-# MapApp
+# Map App
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.1.0.
+## Description
 
-## Development server
+Map App is an interactive mapping application built with Angular and OpenLayers. It provides users with the capability to visualize and interact with various geographical features, such as objectives (points of interest) and country borders, on a map. The application includes features such as user authentication, dynamic geocoding, and interactive overlays.
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+## Capabilities
 
-## Code scaffolding
+- **User Authentication**: Secure login functionality to access the map features.
+- **Interactive Map**: Display and interact with geographical features using OpenLayers.
+- **Objective Highlighting**: Highlight specific objectives (points of interest) on the map based on user interactions.
+- **Country Borders Highlighting**: Dynamically highlight country borders based on user clicks.
+- **Reverse Geocoding**: Convert coordinates into human-readable locations.
+- **Overlay Information**: Show detailed information about map features using overlays.
+- **Debounced Pointer Move**: Improve performance by debouncing pointer move events.
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+## Implementation
 
-## Build
+### Components
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+- **AppComponent**: Root component that bootstraps the application.
+- **LoginComponent**: Handles user authentication.
+- **MapComponent**: Main component that initializes and manages the OpenLayers map.
+- **ObjectiveLayerComponent**: Manages and displays objectives (points of interest) on the map.
+- **ClickedPointLayerComponent**: Handles marking and displaying the location of clicked points on the map.
+- **CountryBordersLayerComponent**: Handles loading and highlighting of country borders on the map.
+- **OverlayComponent**: Manages the display of information overlays on the map.
 
-## Running unit tests
+### Services
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+- **AuthService**: Handles user authentication logic.
+- **GeocodingService**: Provides reverse geocoding functionality to convert coordinates into human-readable locations.
+- **ObjectiveService**: Fetches and manages objectives data.
 
-## Running end-to-end tests
+### Unit Tests
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+The application includes unit tests for some components to ensure they function correctly.
 
-## Further help
+### How to Run
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+1. Clone the repository.
+2. Install dependencies using `npm install`.
+3. Start the development server using `npm start`.
+4. Access the application in your browser at `http://localhost:4200`.
+
+### Dependencies
+
+- Angular
+- OpenLayers
+- RxJS
+- TypeScript
+
+### Dev Dependencies
+
+- Angular CLI
+- Jasmine
+- Karma

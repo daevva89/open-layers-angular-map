@@ -22,9 +22,8 @@ export class GeocodingService {
       }),
       retryWhen((errors) =>
         errors.pipe(
-          mergeMap((error, i) => {
-            if (i < 2 && error.status === 429) {
-              // Retry up to 2 times with a delay of 1 second
+          mergeMap((error, index) => {
+            if (index < 2 && error.status === 429) {
               return of(error).pipe(delay(1000));
             }
             return throwError(error);

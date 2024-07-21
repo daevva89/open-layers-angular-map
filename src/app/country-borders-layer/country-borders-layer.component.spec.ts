@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { CountryBordersLayerComponent } from './country-borders-layer.component';
 
 describe('CountryBordersLayerComponent', () => {
@@ -8,9 +8,11 @@ describe('CountryBordersLayerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CountryBordersLayerComponent]
-    })
-    .compileComponents();
+      imports: [
+        HttpClientTestingModule, // Add this line to provide HttpClient
+        CountryBordersLayerComponent,
+      ],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(CountryBordersLayerComponent);
     component = fixture.componentInstance;

@@ -27,6 +27,7 @@ export class ObjectiveLayerComponent implements OnInit, AfterViewInit {
 
   objectives: Objective[] = [];
   objectiveLayer!: VectorLayer<any>;
+  private geocodeCache: Record<string, string> = {};
 
   constructor(
     private objectiveService: ObjectiveService,
@@ -92,37 +93,68 @@ export class ObjectiveLayerComponent implements OnInit, AfterViewInit {
     longitude: number,
     clickedCoordinates: [number, number]
   ) {
+    console.log('highlightRegionAndObjectives called');
+    console.log('Location:', location);
+    console.log('Coordinates:', latitude, longitude, clickedCoordinates);
+
     const highlightedFeatures: Feature<Point>[] = [];
     const features = this.objectiveLayer.getSource()?.getFeatures() || [];
+
+    console.log('Number of features:', features.length);
 
     const reverseGeocodeRequests = features.map((feature) => {
       const originalCoordinates = feature.get('originalCoordinates');
       if (originalCoordinates && originalCoordinates.length === 2) {
-        return this.geocodingService
-          .reverseGeocode(originalCoordinates[1], originalCoordinates[0]) // Reverse lat/lon for geocoding
-          .pipe(
-            tap((objectiveLocation) => {
-              if (objectiveLocation === location) {
-                const distance = getDistance(
-                  [longitude, latitude],
-                  [originalCoordinates[0], originalCoordinates[1]]
-                );
-                feature.set('distance', distance / 1000); // Convert distance to kilometers
-                highlightedFeatures.push(feature);
-              }
-            }),
-            catchError((error) => {
-              console.error('Geocoding error for objective:', error);
-              return of(null);
-            })
+        const cacheKey = `${originalCoordinates[1]},${originalCoordinates[0]}`;
+        if (this.geocodeCache.hasOwnProperty(cacheKey)) {
+          const objectiveLocation = this.geocodeCache[cacheKey];
+          if (objectiveLocation === location) {
+            const distance = getDistance(
+              [longitude, latitude],
+              [originalCoordinates[0], originalCoordinates[1]]
+            );
+            feature.set('distance', distance / 1000); // Convert distance to kilometers
+            highlightedFeatures.push(feature);
+          }
+          return of(null);
+        } else {
+          console.log(
+            'Reverse geocoding for coordinates:',
+            originalCoordinates
           );
+          return this.geocodingService
+            .reverseGeocode(originalCoordinates[1], originalCoordinates[0]) // Reverse lat/lon for geocoding
+            .pipe(
+              tap((objectiveLocation) => {
+                console.log('Geocoded location:', objectiveLocation);
+                this.geocodeCache[cacheKey] = objectiveLocation || '';
+                if (objectiveLocation === location) {
+                  const distance = getDistance(
+                    [longitude, latitude],
+                    [originalCoordinates[0], originalCoordinates[1]]
+                  );
+                  feature.set('distance', distance / 1000); // Convert distance to kilometers
+                  highlightedFeatures.push(feature);
+                }
+              }),
+              catchError((error) => {
+                console.error('Geocoding error for objective:', error);
+                return of(null);
+              })
+            );
+        }
       }
       return of(null);
     });
 
     forkJoin(reverseGeocodeRequests).subscribe(() => {
+      console.log('Reverse geocoding completed');
       this.updateObjectiveStyles(highlightedFeatures);
-      this.updateObjectiveDistances(clickedCoordinates, location);
+      this.updateObjectiveDistances(
+        clickedCoordinates,
+        location,
+        highlightedFeatures
+      );
     });
   }
 
@@ -142,16 +174,21 @@ export class ObjectiveLayerComponent implements OnInit, AfterViewInit {
 
   updateObjectiveDistances(
     clickedCoordinates: [number, number],
-    clickedLocation: string
+    clickedLocation: string,
+    highlightedFeatures: Feature<Point>[]
   ) {
-    const features = this.objectiveLayer.getSource()?.getFeatures() || [];
-    features.forEach((feature) => {
+    highlightedFeatures.forEach((feature) => {
       const originalCoordinates = feature.get('originalCoordinates');
       if (originalCoordinates && originalCoordinates.length === 2) {
+        console.log('Updating distance for coordinates:', originalCoordinates);
         this.geocodingService
           .reverseGeocode(originalCoordinates[1], originalCoordinates[0]) // Reverse lat/lon for geocoding
           .subscribe(
             (objectiveLocation) => {
+              console.log(
+                'Geocoded location for distance update:',
+                objectiveLocation
+              );
               if (objectiveLocation === clickedLocation) {
                 const distance = getDistance(toLonLat(clickedCoordinates), [
                   originalCoordinates[0],
